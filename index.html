@@ -1,15 +1,209 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tune Detector</title>
-</head>
-<body>
-    <h1 id="note-label"></h1>
-    <h2 id="scale-label"></h2>
-    <h3 id="freq-label"></h3>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+      .visualizer-container {
+        box-shadow: 0 0 50px -12px rgba(6, 182, 212, 0.15);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col items-center p-4 md:p-10 font-sans"
+  >
+    <header
+      class="w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-6 bg-zinc-900/40 p-5 rounded-3xl border border-zinc-800/50 backdrop-blur-md"
+    >
+      <div class="flex items-center gap-4">
+        <div class="relative flex h-3 w-3">
+          <span
+            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"
+          ></span>
+          <span
+            class="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"
+          ></span>
+        </div>
+        <h1 class="text-2xl font-black tracking-tighter uppercase italic">
+          Tune<span class="text-cyan-500">Detector</span>
+        </h1>
+      </div>
+    </header>
+
+    <section
+      class="w-full max-w-4xl flex flex-col gap-6 bg-zinc-900/40 p-5 rounded-3xl border border-zinc-800/50 backdrop-blur-md my-10"
+    >
+      <div class="flex items-center gap-3">
+        <label for="">Noise gate</label>
+        <input type="checkbox" id="noiseGate-config" class="size-4" />
+      </div>
+      <div class="flex items-center gap-3">
+        <label for="">Voice filter</label>
+        <input type="checkbox" id="voiceFilter-config" class="size-4" />
+      </div>
+      <div class="flex items-center gap-3">
+        <label for="">Stable notes</label>
+        <input type="checkbox" id="stable-config" class="size-4" />
+      </div>
+      <div class="flex items-center gap-3">
+        <label for="show-canvas">Show Canvas</label>
+        <input
+          type="checkbox"
+          id="show-canvas"
+          class="size-4"
+          onchange="handleShowCanvas(this.checked)"
+        />
+      </div>
+      <div class="flex items-center gap-3">
+        <p>Select Audio Input</p>
+        <select
+          id="input-select"
+          onchange="getAudioInputType(this.value)"
+          class="bg-zinc-800 border border-zinc-700 text-sm font-medium rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all cursor-pointer"
+        >
+          <option value="mic" selected>🎤 Microphone</option>
+          <option value="dev">💻 System Audio</option>
+        </select>
+        <button
+          id="start-stream"
+          class="bg-cyan-600 hover:bg-cyan-500 text-white px-8 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-cyan-900/20 active:scale-95 cursor-pointer"
+        >
+          START SESSION
+        </button>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+      <div
+        class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 flex flex-col items-center justify-center shadow-xl"
+      >
+        <p
+          class="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold mb-2"
+        >
+          Pitch Detection
+        </p>
+        <div
+          id="note-label"
+          class="text-7xl font-black text-white tabular-nums drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+        >
+          --
+        </div>
+        <div
+          id="freq-label"
+          class="text-cyan-500/80 font-mono text-sm mt-2 tracking-widest"
+        >
+          0.00 Hz
+        </div>
+      </div>
+
+      <div class="md:col-span-2 grid grid-rows-2 gap-4">
+        <div
+          class="bg-zinc-900 px-6 py-4 rounded-2xl border border-zinc-800 flex items-center justify-between"
+        >
+          <div>
+            <p
+              class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest"
+            >
+              Detected Scale
+            </p>
+            <div class="flex items-center gap-3 mt-1">
+              <p
+                id="scale-label"
+                class="text-xl font-semibold text-zinc-100 truncate"
+              >
+                Waiting for input...
+              </p>
+              <div
+                id="accidental-badge"
+                class="hidden px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-sm font-black text-cyan-400 uppercase tracking-tighter"
+              >
+                0 #
+              </div>
+            </div>
+          </div>
+          <div class="text-zinc-700 font-black text-2xl uppercase select-none">
+            #♭
+          </div>
+        </div>
+
+        <div
+          class="bg-zinc-900 px-6 py-4 rounded-2xl border border-zinc-800 flex items-center justify-between"
+        >
+          <div>
+            <p
+              class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest"
+            >
+              Possible Chord
+            </p>
+            <p
+              id="chord-label"
+              class="text-xl font-semibold text-zinc-100 mt-1 truncate"
+            >
+              --
+            </p>
+          </div>
+          <div class="text-zinc-700 font-black text-2xl uppercase">♪</div>
+        </div>
+      </div>
+    </section>
+    <footer class="w-full max-w-4xl mb-8 mt-4">
+      <div
+        class="bg-zinc-900 border border-zinc-800 px-6 py-3 rounded-2xl flex items-center justify-between"
+      >
+        <div class="flex items-center gap-4 overflow-hidden">
+          <span class="text-zinc-600 text-[10px] uppercase font-black"
+            >History</span
+          >
+          <p
+            id="recentNotes-label"
+            class="text-zinc-500 font-mono text-xs tracking-widest truncate"
+          ></p>
+        </div>
+      </div>
+    </footer>
+
+    <main
+      class="visualizer-container relative w-full max-w-4xl aspect-[21/9] bg-zinc-950 rounded-[2rem] border border-zinc-800/80 overflow-hidden group"
+    >
+      <canvas class="z-10 w-full h-full"></canvas>
+
+      <div
+        class="absolute bottom-6 left-6 flex items-center gap-3 pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity"
+      >
+        <div class="text-[10px] font-mono text-zinc-500 uppercase">
+          Live Oscilloscope Feed
+        </div>
+      </div>
+
+      <div
+        class="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style="
+          background-image: linear-gradient(#fff 1px, transparent 1px),
+            linear-gradient(90deg, #fff 1px, transparent 1px);
+          background-size: 40px 40px;
+        "
+      ></div>
+    </main>
+
     <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js"></script>
-    <script src="/main.js" type="module"></script>
-</body>
+    <script src="./scripts/main.js" type="module"></script>
+    <script>
+      window.showCanvas = false;
+      window.streamType = "mic";
+
+      function getAudioInputType(type) {
+        window.streamType = type;
+      }
+
+      function handleShowCanvas(val) {
+        if (val === true) {
+          window.showCanvas = true;
+          return;
+        }
+        window.showCanvas = false;
+      }
+    </script>
+  </body>
 </html>
