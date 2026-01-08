@@ -1,7 +1,6 @@
 let smoothedRadius = 110;
 const logo = new Image();
-logo.src =
-  "../static/1.png";
+logo.src = new URL("../static/1.png", import.meta.url).href;
 
 /**
  * Initializes and starts the visualizer loop
