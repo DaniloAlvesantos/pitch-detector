@@ -44,6 +44,7 @@ export function processAudioTheory(analyzer, audioContext, pitchDetector) {
       scale: scales[0],
       chord: chords[0],
       accidental: getAccidentalCount(scales[0]),
+      recentNotes: notes.slice(-7)
     };
   }
   return null;
